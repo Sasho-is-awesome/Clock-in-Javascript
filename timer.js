@@ -10,12 +10,14 @@ const daysSpan = document.getElementById("days");
 
 function formatTime(date)
 {
-	let result = [date, date, Math.min(59, 5 + date), Math.min(59, 20 + date)];
+	let result = [
+		date.getFullYear(), date.getMonth() + 1, date.getDate(),//the returned month is a value between 0 to 11
+		date.getHours(), date.getMinutes(), date.getSeconds()];
 	return result;
 }
 
-const deadlineTime = [2023, 5, 28, 12, 32];
-const currentTime = [2023, 2, 12, 15, 10];
+let deadlineTime;
+let currentTime;
 
 function nullTimer()
 {
@@ -25,75 +27,104 @@ function nullTimer()
 	days = 0;
 }
 
+function isLarger(arg1, arg2)
+{
+	if (arg1 > arg2)
+		return true;
+
+	return false;
+}
+
 function deadlineIsValid()
 {
-	let deadlineValue = "" + deadlineTime[0] + deadlineTime[1] + deadlineTime[2] + deadlineTime[3] + deadlineTime[4];
-	let currentValue = "" + currentTime[0] + currentTime[1] + currentTime[2] + currentTime[3] + currentTime[4];
+	console.log("Comparing: " + deadlineTime + " with " + currentTime);
 
-	deadlineValue = parseInt(deadlineValue);
-	currentValue = parseInt(currentValue);
+	if (deadlineTime[0] !== currentTime[0]) return isLarger(deadlineTime[0], currentTime[0]);
+	if (deadlineTime[1] !== currentTime[1]) return isLarger(deadlineTime[1], currentTime[1]);
+	if (deadlineTime[2] !== currentTime[2]) return isLarger(deadlineTime[2], currentTime[2]);
+	if (deadlineTime[3] !== currentTime[3]) return isLarger(deadlineTime[3], currentTime[3]);
+	if (deadlineTime[4] !== currentTime[4]) return isLarger(deadlineTime[4], currentTime[4]);
+	if (deadlineTime[5] !== currentTime[5]) return isLarger(deadlineTime[5], currentTime[5]);
 
-	console.log("Comparing: " + deadlineValue + " with " + currentValue);
-
-	return deadlineValue > currentValue;
+	return false;
 }
 
 function resetTimer()
 {
-	//const deadline = formatTime(deadlineTime);
-	//const currentTime = formatTime(0);
+	nullTimer();
 
-	//seconds = 59;
-	//minutes = deadline[1] - currentTime[1];
-	//hours = deadline[2] - currentTime[2];
-	//days = deadline[3] - currentTime[3];
+	let currentDate = new Date();
+	currentTime = formatTime(currentDate);
 
-	//console.log("Remaining time is set to :" + seconds + ":" + minutes + ":" + hours + ":" + days);
 	console.log("Checking given dates:");
 	if (deadlineIsValid() === false)
 	{
 		console.log("Dates are invalid!");
-
-		nullTimer();
 		return;
 	}
 	console.log("Dates are valid!");
-	//HANDLE SPECIAL CASES!
 
-	seconds = 59 - currentTime[4] + deadlineTime[4];
-	if (seconds >= 60)
-	{
-		minutes++;
-		seconds = seconds - 60;
-	}
+	outputDate("resetTimer() BEFORE CALC");
 
-	minutes = minutes + 59 - currentTime[3] + deadlineTime[3];
-	if (minutes >= 60)
+	if (deadlineTime[0] === currentTime[0] &&
+		deadlineTime[1] === currentTime[1] &&
+		deadlineTime[2] === currentTime[2] &&
+		deadlineTime[3] === currentTime[3] &&
+		deadlineTime[4] === currentTime[4])//seconds remaining
 	{
-		hours++;
-		minutes = minutes - 60;
+		seconds = deadlineTime[5] - currentTime[5];
+		outputDate("resetTimer() CASE 1");
+		return;
 	}
 
-	hours = hours + 24 - currentTime[2] + deadlineTime[2];
-	if (hours >= 24)
+	if (deadlineTime[0] === currentTime[0] &&
+		deadlineTime[1] === currentTime[1] &&
+		deadlineTime[2] === currentTime[2] &&
+		deadlineTime[3] === currentTime[3])//minutes remaining
 	{
-		days++;
-		hours = hours - 24;
+		minutes = deadlineTime[4] - currentTime[4] - 1;
+		setSec();
+		outputDate("resetTimer() CASE 2");
+		return;
 	}
 
-	if (deadlineTime[0] > currentTime[0])
+	if (deadlineTime[0] === currentTime[0] &&
+		deadlineTime[1] === currentTime[1] &&
+		deadlineTime[2] === currentTime[2])//hours remaining
 	{
-		days = days +
-			daysToEnd(currentTime[1], currentTime[2], currentTime[0]) +
-			daysToDate(deadlineTime[1], deadlineTime[2], deadlineTime[0])
-			+ daysThroughYears(currentTime[0] + 1, deadlineTime[0] - 1);
+		hours = deadlineTime[3] - currentTime[3] - 1;
+		setMinSec();
+		outputDate("resetTimer() CASE 3");
+		return;
 	}
-	else (deadlineTime[0] === currentTime[0])
+
+	if (deadlineTime[0] === currentTime[0] &&
+		deadlineTime[1] === currentTime[1])//days remianing
 	{
-		days = days +
-			daysToEnd(currentTime[1], currentTime[2], currentTime[0]) -
-			daysToEnd(deadlineTime[1], deadlineTime[2], deadlineTime[0]) - 1;
+		days = deadlineTime[2] - currentTime[2] - 1;
+		setHoursMinSec();
+		outputDate("resetTimer() CASE 4");
+		return;
 	}
+
+	if (deadlineTime[0] === currentTime[0])//months remaining
+	{
+		daysBetweenMonths();
+		setDaysHoursMinSec();
+		outputDate("resetTimer() CASE 5");
+		return;
+	}
+
+	days += daysToEnd(currentTime[1], currentTime[2], currentTime[0]);
+	//console.log("resetTimer() Days are now: " + days);
+	days += daysToDate(deadlineTime[1], deadlineTime[2], deadlineTime[0]);
+	//console.log("resetTimer() Days are now: " + days);
+	days += daysThroughYears();
+	//console.log("resetTimer() Days are now: " + days);
+
+	setHoursMinSec();
+
+	outputDate("resetTimer() CASE 6");
 }
 
 function daysToEnd(month, day, year)
@@ -120,11 +151,14 @@ function daysToDate(month, day, year)
 	return result;
 }
 
-function daysThroughYears(from, to)
+function daysThroughYears()
 {
+	if (currentTime[0] + 1 === deadlineTime[0])
+		return 0;
+
 	let result = 0;
 
-	for (let y = from; y <= to; y++)
+	for (let y = currentTime[0] + 1; y < deadlineTime[0]; y++)
 		result += daysInYear(y);
 
 	return result;
@@ -156,6 +190,67 @@ function daysInYear(year)
 	return 365;
 }
 
+function setSec()
+{
+	seconds = deadlineTime[5] + 59 - currentTime[5];
+
+	if (seconds >= 60)
+	{
+		seconds -= 60;
+		minutes++;
+	}//minutes are set
+}
+function setMinSec()
+{
+	setSec();
+
+	minutes += deadlineTime[4] + 59 - currentTime[4];
+
+	if (minutes >= 60)
+	{
+		hours++;
+		minutes -= 60;
+	}//hours are set
+
+}
+function setHoursMinSec()
+{
+	setMinSec();
+
+	hours += deadlineTime[3] + 23 - currentTime[3];//hours may have increased in setMinSec()
+
+	if (hours >= 24)
+	{
+		days ++;
+		hours -= 24;
+	}//days are set
+}
+function setDaysHoursMinSec()
+{
+	setHoursMinSec();
+	//console.log("setDaysHoursMinSec() Days are now: " + days);
+	days += monthDays(currentTime[1], currentTime[0]) - currentTime[2] - 1;
+	//console.log("setDaysHoursMinSec() Days are now: " + days);
+	days += deadlineTime[2];
+	//console.log("setDaysHoursMinSec() Days are now: " + days);
+}
+function daysBetweenMonths()
+{
+	if (currentTime[1] + 1 === deadlineTime[1])
+		return;
+
+	for (let m = currentTime[1] + 1; m < deadlineTime[1]; m++)
+	{
+		days += monthDays(m, currentTime[0]);
+		console.log("daysBetweenMonths() Days are now: " + days);
+	}
+}
+
+function outputDate(calledFrom)
+{
+	console.log("Date in " + calledFrom + " is :" + seconds + ":" + minutes + ":" + hours + ":" + days);
+}
+
 function tick()
 {
 	seconds--;
@@ -164,6 +259,8 @@ function tick()
 	{
 		seconds = 59;
 		minutes--;
+
+		resetTimer();//synchronising
 	}
 
 	if (minutes < 0)
@@ -219,6 +316,11 @@ function timer()
 		elapsedTime = performance.now() - startingTime;
 	}, 1000 - elapsedTime);
 }
+
+
+let deadlineDate = new Date("December 15, 2023 11:09:19");//you know Americans are behind it all when the date is written like this
+
+deadlineTime = formatTime(deadlineDate);
 
 resetTimer();
 timer();
