@@ -8,16 +8,26 @@ const minutesSpan = document.getElementById("minutes");
 const hoursSpan = document.getElementById("hours");
 const daysSpan = document.getElementById("days");
 
-function formatTime(date)
+const deadlineSpan = document.getElementById("deadline");
+
+const secondsText = document.getElementById("secondsText");
+const minutesText = document.getElementById("minutesText");
+const hoursText = document.getElementById("hoursText");
+const daysText = document.getElementById("daysText");
+
+function formatTime()
 {
-	let result = [
-		date.getFullYear(), date.getMonth() + 1, date.getDate(),//the returned month is a value between 0 to 11
-		date.getHours(), date.getMinutes(), date.getSeconds()];
+	let temp = deadlineSpan.textContent.split(/\s|:|-/);
+
+	let result = [parseInt(temp[2]), parseInt(temp[1]), parseInt(temp[0]), parseInt(temp[3]), parseInt(temp[4]), parseInt(temp[5])];
+	console.log("Processed date: " + result);
+	
 	return result;
 }
 
-let deadlineTime;
-let currentTime;
+let currentTime;//current date is set in resetTimer()
+
+let deadlineTime = formatTime();
 
 function nullTimer()
 {
@@ -53,8 +63,10 @@ function resetTimer()
 {
 	nullTimer();
 
-	let currentDate = new Date();
-	currentTime = formatTime(currentDate);
+	let currentDate = new Date();//set the current date; the clock synchronises, so it need to reset the current date
+	currentTime = [
+		currentDate.getFullYear(), currentDate.getMonth() + 1, currentDate.getDate(),//the returned month is a value between 0 to 11
+		currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds()];;
 
 	console.log("Checking given dates:");
 	if (deadlineIsValid() === false)
@@ -259,14 +271,14 @@ function tick()
 	{
 		seconds = 59;
 		minutes--;
-
-		resetTimer();//synchronising
 	}
 
 	if (minutes < 0)
 	{
 		minutes = 59;
 		hours--;
+
+		resetTimer();//synchronising
 	}
 
 	if (hours < 0)
@@ -290,14 +302,73 @@ function tick()
 
 function updateTimer()
 {
-	secondsSpan.textContent = seconds.toString();
-	minutesSpan.textContent = minutes.toString();
+	secondsSpan.textContent = seconds.toString();//this is to be improved
+	minutesSpan.textContent = minutes.toString();//all text updates on every tick
 	hoursSpan.textContent = hours.toString();
 	daysSpan.textContent = days.toString();
+
+	if (days === 1)
+	{
+		daysText.textContent = "ден";
+	}
+	else if (days === 0)
+	{
+		daysSpan.textContent = "";
+		daysText.textContent = "";
+	}
+
+	if (hours === 1)
+	{
+		hoursText.textContent = "час";
+	}
+	else if (hours === 0 && days === 0)
+	{
+		hoursSpan.textContent = "";
+		hoursText.textContent = "";
+	}
+	else
+	{
+		hoursText.textContent = "часа";
+	}
+
+	if (minutes === 1)
+	{
+		minutesText.textContent = "минута";
+	}
+	else if (minutes === 0 && hours === 0 && days === 0)
+	{
+		minutesText.textContent = "";
+		minutesSpan.textContent = "";
+	}
+	else
+	{
+		minutesText.textContent = "минути";
+	}
+
+	if (seconds === 1)
+	{
+		secondsText.textContent = "секунда";
+	}
+	else if (seconds === 0 && minutes === 0 && hours === 0 && days === 0)
+	{
+		secondsText.textContent = "";
+		secondsSpan.textContent = "";
+	}
+	else
+	{
+		secondsText.textContent = "секунди";
+	}
+
 }
 
 function timer()
 {
+	updateTimer();
+	if (seconds <= 0 && minutes <= 0 && hours <= 0 && days <= 0)
+	{
+		onDeadlineReached();
+		return;
+	}
 	//while (seconds > 0 || minutes > 0 || hours > 0 || days > 0)
 	//	setTimeout(tick(), 1000);
 	let elapsedTime = 0;
@@ -307,9 +378,10 @@ function timer()
 
 		if (seconds <= 0 && minutes <= 0 && hours <= 0 && days <= 0)
 		{
-			tickTime = 0;
 			clearInterval(ticking);
 			ticking = null;
+			onDeadlineReached();
+			return;
 		}
 
 		tick();
@@ -317,10 +389,10 @@ function timer()
 	}, 1000 - elapsedTime);
 }
 
-
-let deadlineDate = new Date("December 15, 2023 11:09:19");//you know Americans are behind it all when the date is written like this
-
-deadlineTime = formatTime(deadlineDate);
+function onDeadlineReached()
+{
+	window.alert("Countdown is over!");
+}
 
 resetTimer();
 timer();
